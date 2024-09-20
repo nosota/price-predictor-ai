@@ -1,4 +1,5 @@
 SELECT stat.delivery_order_id,
+       stat.order_date,
        stat.order_id,
        stat.distance,
        stat.price_gross_per_ton,
