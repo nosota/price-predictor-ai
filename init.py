@@ -34,6 +34,9 @@ logger.info(f"POSTGRES_PORT = {POSTGRES_PORT}")
 
 POSTGRES_DSN=f"dbname={POSTGRES_DB} user={POSTGRES_USER} password={POSTGRES_PASSWORD} host={POSTGRES_HOST} port={POSTGRES_PORT}"
 
+MAX_WORKERS = int(os.getenv('MAX_WORKERS', "1"))
+logger.info(f"MAX_WORKERS = {MAX_WORKERS}")
+
 # Настройки формулы по умолчанию
 logger.info("********************************************************************************")
 SOURCE_TARIFF_COEFFICIENT = float(os.environ['SOURCE_TARIFF_COEFFICIENT'])
