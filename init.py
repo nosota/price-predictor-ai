@@ -38,7 +38,7 @@ MAX_WORKERS = int(os.getenv('MAX_WORKERS', "1"))
 if MAX_WORKERS <= 0:
     cpu_cores = os.cpu_count()
     logger.info(f"Number of CPU cores: {cpu_cores}")
-    MAX_WORKERS = cpu_cores
+    MAX_WORKERS = min(32, cpu_cores + 4)
 
 logger.info(f"MAX_WORKERS = {MAX_WORKERS}")
 
