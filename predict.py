@@ -1,9 +1,11 @@
+from typing import Optional
 import numpy as np
 import pandas as pd
-
 from hist_data import get_historical_data
+from my_types import LoadingMethod
 from processing import SeriesPredictor, prepare_prices, filter_par_df, get_pars, model_par_df, make_working_df, \
     PrecedentPredictor
+from utils import round_to_nearest_10
 
 
 def get_dest_id(addresses, to_address):
@@ -40,8 +42,13 @@ def use_precedent_model(pr_df: pd.DataFrame, historical_data: pd.DataFrame, regi
     return predicted_price
 
 
-def predict_tariff(region_code, today_date, order_date, crop_id, distance, to_address: str) -> float:
-    pr_df = prepare_prices("тарифы июнь 2024_1.csv")
+def predict_tariff(pr_df, region_code, today_date, order_date, crop_id, distance, to_address: str) -> float:
+    tariff = _predict_tariff_impl(pr_df, region_code, today_date, order_date, crop_id, distance, to_address)
+    tariff = tariff // 100
+    return round_to_nearest_10(tariff)
+
+
+def _predict_tariff_impl(pr_df, region_code, today_date, order_date, crop_id, distance, to_address: str) -> float:
     fp = filter_par_df(np.arange(1, 4), np.append(np.arange(2, 11), 0), np.append(np.arange(2, 6), 0))
     mp = model_par_df(['fourier', 'poly'], np.arange(2, 20), np.arange(0, 10), np.append(np.arange(4, 9), 0),
                       np.arange(0, 7))
@@ -53,7 +60,6 @@ def predict_tariff(region_code, today_date, order_date, crop_id, distance, to_ad
             form_type = 'k0k1'  # тип формулы цены
             predictor = SeriesPredictor(tarif_df=pr_df, fpars=filt_pars, mpars=mod_pars,
                                         region_code=region_code, form_type=form_type)
-
             try:
                 predictor.fit(historical_data, date=today_date)
                 horizon = order_date - today_date
