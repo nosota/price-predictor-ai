@@ -32,8 +32,8 @@ if __name__ == '__main__':
         hours_until_disassembled = row['hours_until_disassembled']
         crop_name = row['crop_name']
 
-        df.loc[len(df)] = [region_code, order_date, distance, crop_name, disassembled_weight, hours_until_disassembled,
+        results.loc[len(df)] = [region_code, order_date, distance, crop_name, disassembled_weight, hours_until_disassembled,
                            real_price, predicted_price, predicted_price - real_price]
 
     results_sorted = results.sort_values(by='distance')
-    df.to_excel("out/Результаты проверки формулы.xlsx", index=False)  # index=False prevents saving the index
+    results_sorted.to_excel("out/Результаты проверки формулы.xlsx", index=False)  # index=False prevents saving the index

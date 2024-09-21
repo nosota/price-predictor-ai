@@ -60,23 +60,27 @@ def get_historical_data(num_days, region_code, today_date, crops_id, right_price
             })
 
             rows = cur.fetchall()
-            filtered_df = pd.DataFrame(rows, columns=[desc[0] for desc in cur.description])
+            if len(rows) > 0:
+                filtered_df = pd.DataFrame(rows, columns=[desc[0] for desc in cur.description])
 
-            tmp_df = pd.DataFrame()
-            date_key = 'ctime'
-            tmp_df['date'] = filtered_df[date_key].dt.floor("D")
-            tmp_df['id'] = filtered_df['order_id']
-            tmp_df['month'] = filtered_df[date_key].dt.month
-            tmp_df['distance'] = filtered_df['distance'].to_numpy()
-            tmp_df['target'] = filtered_df[target_key]
-            tmp_df['targ_price'] = tmp_df['target'].to_numpy() / tmp_df['distance']
-            tmp_df['region_code'] = filtered_df['region_code'].to_numpy()
-            tmp_df['crops_id'] = filtered_df['crops_id'].to_numpy()
-            tmp_df['day_of_week'] = tmp_df['date'].dt.day_of_week
-            tmp_df['hours'] = filtered_df['hours_until_disassembled']
-            le = LabelEncoder()
-            tmp_df['dest_id'] = le.fit_transform(filtered_df['dest_title'])
-            tmp_df = tmp_df.set_index(['date', 'id'])
-            tmp_df.sort_index(inplace=True)
+                tmp_df = pd.DataFrame()
+                date_key = 'ctime'
+                print(f'{filtered_df[date_key]}')
+                tmp_df['date'] = filtered_df[date_key].dt.floor("D")
+                tmp_df['id'] = filtered_df['order_id']
+                tmp_df['month'] = filtered_df[date_key].dt.month
+                tmp_df['distance'] = filtered_df['distance'].to_numpy()
+                tmp_df['target'] = filtered_df[target_key]
+                tmp_df['targ_price'] = tmp_df['target'].to_numpy() / tmp_df['distance']
+                tmp_df['region_code'] = filtered_df['region_code'].to_numpy()
+                tmp_df['crops_id'] = filtered_df['crops_id'].to_numpy()
+                tmp_df['day_of_week'] = tmp_df['date'].dt.day_of_week
+                tmp_df['hours'] = filtered_df['hours_until_disassembled']
+                le = LabelEncoder()
+                tmp_df['dest_id'] = le.fit_transform(filtered_df['dest_title'])
+                tmp_df = tmp_df.set_index(['date', 'id'])
+                tmp_df.sort_index(inplace=True)
 
-            return tmp_df, le.classes_
+                return tmp_df, le.classes_
+            else:
+                return pd.DataFrame(), []

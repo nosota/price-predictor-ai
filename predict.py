@@ -71,10 +71,13 @@ def _predict_tariff_impl(pr_df, region_code, today_date, order_date, crop_id, di
                 # Прецедентная модель
                 dest_id = get_dest_id(addresses, to_address)  # returns -1 if not found
                 return use_precedent_model(pr_df, historical_data, region_code, order_date, distance, crop_id, dest_id)
-        else:
+        elif len(historical_data) > 0:
             # Прецедентная модель
             dest_id = get_dest_id(addresses, to_address)  # returns -1 if not found
             return use_precedent_model(pr_df, historical_data, region_code, order_date, distance, crop_id, dest_id)
+        else:
+            # Моя модель
+            return use_default_model()
 
     elif distance >= 300:
         historical_data, addresses = get_historical_data(5, region_code, today_date, crop_id)  # TODO: переписать на базу, вычитать историю за 5 дней
@@ -94,10 +97,13 @@ def _predict_tariff_impl(pr_df, region_code, today_date, order_date, crop_id, di
                 # Прецедентная модель
                 dest_id = get_dest_id(addresses, to_address)  # returns -1 if not found
                 return use_precedent_model(pr_df, historical_data, region_code, order_date, distance, crop_id, dest_id)
-        else:
+        elif len(historical_data) > 0:
             # Прецедентная модель
             dest_id = get_dest_id(addresses, to_address)  # returns -1 if not found
             return use_precedent_model(pr_df, historical_data, region_code, order_date, distance, crop_id, dest_id)
+        else:
+            # Моя модель
+            return use_default_model()
     else:
         # Моя модель
         return use_default_model()
