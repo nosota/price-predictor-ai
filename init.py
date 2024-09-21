@@ -34,3 +34,8 @@ logger.info(f"POSTGRES_PORT = {POSTGRES_PORT}")
 
 POSTGRES_DSN=f"dbname={POSTGRES_DB} user={POSTGRES_USER} password={POSTGRES_PASSWORD} host={POSTGRES_HOST} port={POSTGRES_PORT}"
 
+# Настройки формулы по умолчанию
+logger.info("********************************************************************************")
+SOURCE_TARIFF_COEFFICIENT = float(os.environ['SOURCE_TARIFF_COEFFICIENT'])
+logger.info(f"SOURCE_TARIFF_COEFFICIENT = {SOURCE_TARIFF_COEFFICIENT}")
+logger.info("********************************************************************************")

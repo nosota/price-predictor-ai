@@ -15,8 +15,9 @@ def get_dest_id(addresses, to_address):
     return -1
 
 
-def use_default_model() -> float:
-    # TODO: моя модель
+def use_default_model(pr_df, region_code, order_date, distance) -> float:
+    # 1. Берем цену из тарифа.
+    # 2. В тарифе нет цены на указанную дату, делаем предсказание на основе тарифа прошлого года.
     return 0.0
 
 
@@ -77,7 +78,7 @@ def _predict_tariff_impl(pr_df, region_code, today_date, order_date, crop_id, di
             return use_precedent_model(pr_df, historical_data, region_code, order_date, distance, crop_id, dest_id)
         else:
             # Моя модель
-            return use_default_model()
+            return use_default_model(pr_df, region_code, order_date, distance)
 
     elif distance >= 300:
         historical_data, addresses = get_historical_data(5, region_code, today_date, crop_id)  # TODO: переписать на базу, вычитать историю за 5 дней
@@ -103,7 +104,7 @@ def _predict_tariff_impl(pr_df, region_code, today_date, order_date, crop_id, di
             return use_precedent_model(pr_df, historical_data, region_code, order_date, distance, crop_id, dest_id)
         else:
             # Моя модель
-            return use_default_model()
+            return use_default_model(pr_df, region_code, order_date, distance)
     else:
         # Моя модель
-        return use_default_model()
+        return use_default_model(pr_df, region_code, order_date, distance)
