@@ -6,6 +6,7 @@ from init import MAX_WORKERS
 from predict import predict_tariff
 from models.ai.processing import prepare_prices
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import warnings
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +38,15 @@ def process_row(row, pr_df):
             'inaccuracy': predicted_price - real_price
         }
     except Exception as ex:
-        logger.exception(ex)
+        # logger.exception(ex)
         return None
 
 if __name__ == '__main__':
     wait_pgsql_connection()
+
+    # Подавить предупреждение "price-predictor-ai/models/ai/processing.py:198: OptimizeWarning: Covariance of the parameters could not be estimated
+    #   par, cov = curve_fit(fun, d, p, bounds=([-200000, 0.5], [200000, 2]))"
+    warnings.filterwarnings("ignore", message="Covariance of the parameters could not be estimated", category=UserWarning)
 
     from_date = '2024-07-01'
     df = query_smsd_orders(from_date)
@@ -55,7 +60,8 @@ if __name__ == '__main__':
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {executor.submit(process_row, row, pr_df): index for index, row in df.iterrows()}
 
-        for future in tqdm(as_completed(futures), total=len(df)):
+        # Use tqdm to wrap the as_completed iterator
+        for future in tqdm(as_completed(futures), total=len(futures)):
             result = future.result()
             if result is not None:
                 results = results.append(result, ignore_index=True)

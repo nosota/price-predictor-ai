@@ -2,7 +2,7 @@ import logging
 import os
 import ssl
 import warnings
-
+import os
 from dotenv import load_dotenv
 
 load_dotenv(verbose=True)  # .env is used only for DEV env, PROD or Docker doesn't use the file
@@ -35,6 +35,11 @@ logger.info(f"POSTGRES_PORT = {POSTGRES_PORT}")
 POSTGRES_DSN=f"dbname={POSTGRES_DB} user={POSTGRES_USER} password={POSTGRES_PASSWORD} host={POSTGRES_HOST} port={POSTGRES_PORT}"
 
 MAX_WORKERS = int(os.getenv('MAX_WORKERS', "1"))
+if MAX_WORKERS <= 0:
+    cpu_cores = os.cpu_count()
+    logger.info(f"Number of CPU cores: {cpu_cores}")
+    MAX_WORKERS = cpu_cores
+
 logger.info(f"MAX_WORKERS = {MAX_WORKERS}")
 
 # Настройки формулы по умолчанию
