@@ -47,3 +47,7 @@ logger.info("*******************************************************************
 SOURCE_TARIFF_COEFFICIENT = float(os.environ['SOURCE_TARIFF_COEFFICIENT'])
 logger.info(f"SOURCE_TARIFF_COEFFICIENT = {SOURCE_TARIFF_COEFFICIENT}")
 logger.info("********************************************************************************")
+
+# Подавить предупреждение "price-predictor-ai/models/ai/processing.py:198: OptimizeWarning: Covariance of the parameters could not be estimated
+#   par, cov = curve_fit(fun, d, p, bounds=([-200000, 0.5], [200000, 2]))"
+warnings.filterwarnings("ignore", message="Covariance of the parameters could not be estimated", category=UserWarning)
