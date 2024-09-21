@@ -65,7 +65,6 @@ def get_historical_data(num_days, region_code, today_date, crops_id, right_price
 
                 tmp_df = pd.DataFrame()
                 date_key = 'ctime'
-                print(f'{filtered_df[date_key]}')
                 tmp_df['date'] = filtered_df[date_key].dt.floor("D")
                 tmp_df['id'] = filtered_df['order_id']
                 tmp_df['month'] = filtered_df[date_key].dt.month

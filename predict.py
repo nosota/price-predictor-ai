@@ -1,10 +1,7 @@
-from typing import Optional
 import numpy as np
 import pandas as pd
 from hist_data import get_historical_data
-from my_types import LoadingMethod
-from processing import SeriesPredictor, prepare_prices, filter_par_df, get_pars, model_par_df, make_working_df, \
-    PrecedentPredictor
+from models.ai.processing import SeriesPredictor, filter_par_df, get_pars, model_par_df, PrecedentPredictor
 from utils import round_to_nearest_10
 
 

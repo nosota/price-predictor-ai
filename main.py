@@ -1,10 +1,8 @@
-from datetime import datetime
-
 import pandas as pd
 from tqdm import tqdm
 from db import wait_pgsql_connection, query_smsd_orders
 from predict import predict_tariff
-from processing import prepare_prices
+from models.ai.processing import prepare_prices
 
 if __name__ == '__main__':
     wait_pgsql_connection()
