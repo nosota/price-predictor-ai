@@ -51,8 +51,14 @@ def _predict_tariff_impl(pr_df, region_code, today_date, order_date, crop_id, di
     mp = model_par_df(['fourier', 'poly'], np.arange(2, 20), np.arange(0, 10), np.append(np.arange(4, 9), 0),
                       np.arange(0, 7))
 
-    if 50 <= distance < 300:
-        historical_data, addresses = get_historical_data(11, region_code, today_date, crop_id)  # TODO: переписать на базу, вычитать историю за 11 дней
+    historical_data, addresses = get_historical_data(11, region_code, today_date, crop_id)
+
+    if 50 <= distance < 100:
+        # Используем перцедентную модель
+        dest_id = get_dest_id(addresses, to_address)  # returns -1 if not found
+        return use_precedent_model(pr_df, historical_data, region_code, order_date, distance, crop_id, dest_id)
+    else:
+        # Используем временные ряды
         if len(historical_data) >= 15:
             filt_pars, mod_pars = get_pars(fp, mp, 67, 23)
             form_type = 'k0k1'  # тип формулы цены
@@ -61,47 +67,15 @@ def _predict_tariff_impl(pr_df, region_code, today_date, order_date, crop_id, di
             try:
                 predictor.fit(historical_data, date=today_date)
                 horizon = order_date - today_date
-                res = predictor.predict(horizon, horizon)
+                res = predictor.predict(horizon, horizon)  # TODO: DataFrame('date', 'distance'), см pd.MultiIndex
                 res['target_pred'] = res['target_pred'] / res['distance']  # переводим в тонна-километр
                 estimated_price = res['target_pred']
                 return estimated_price
-            except:
+            except Exception as ex:
                 # Прецедентная модель
                 dest_id = get_dest_id(addresses, to_address)  # returns -1 if not found
                 return use_precedent_model(pr_df, historical_data, region_code, order_date, distance, crop_id, dest_id)
-        elif len(historical_data) > 0:
+        else:
             # Прецедентная модель
             dest_id = get_dest_id(addresses, to_address)  # returns -1 if not found
             return use_precedent_model(pr_df, historical_data, region_code, order_date, distance, crop_id, dest_id)
-        else:
-            # Моя модель
-            return use_default_model(pr_df, region_code, order_date, distance)
-
-    elif distance >= 300:
-        historical_data, addresses = get_historical_data(5, region_code, today_date, crop_id)  # TODO: переписать на базу, вычитать историю за 5 дней
-        if len(historical_data) >= 15:
-            filt_pars, mod_pars = get_pars(fp, mp, 52, 127)
-            form_type = 'k1'  # тип формулы цены
-            predictor = SeriesPredictor(tarif_df=pr_df, fpars=filt_pars, mpars=mod_pars,
-                                        region_code=region_code, form_type=form_type)
-            try:
-                predictor.fit(historical_data, date=today_date)
-                horizon = order_date - today_date
-                res = predictor.predict(horizon, horizon)
-                res['target_pred'] = res['target_pred'] / res['distance']  # переводим в тонна-километр
-                estimated_price = res['target_pred']
-                return estimated_price
-            except:
-                # Прецедентная модель
-                dest_id = get_dest_id(addresses, to_address)  # returns -1 if not found
-                return use_precedent_model(pr_df, historical_data, region_code, order_date, distance, crop_id, dest_id)
-        elif len(historical_data) > 0:
-            # Прецедентная модель
-            dest_id = get_dest_id(addresses, to_address)  # returns -1 if not found
-            return use_precedent_model(pr_df, historical_data, region_code, order_date, distance, crop_id, dest_id)
-        else:
-            # Моя модель
-            return use_default_model(pr_df, region_code, order_date, distance)
-    else:
-        # Моя модель
-        return use_default_model(pr_df, region_code, order_date, distance)

@@ -768,9 +768,9 @@ def optimize_filter_model(df, t_df, fp_df, mp_df, reg_fun, restore_fun, *, regio
 # Предсказание по тарифу
 def predict_4dist_by_tarif(dist, date, r_id, t_df):
     max_left = t_df.index.get_level_values(0).max()
-    t_mask = (t_df['begin_date'] <= date) & (t_df['end_date'] >= date) & (t_df['region_code'] == r_id)
-    t_mask = t_mask & (t_df['begin_dist'] < dist) & (t_df['end_dist'] >= dist)
-    return dist * t_df.loc[t_mask]['price'].mean()
+    t_mask = (t_df['begin_date'].dt.date <= date) & (t_df['end_date'].dt.date >= date) & (t_df['region_code'] == r_id)
+    t_mask = t_mask&(t_df['begin_dist']<dist)&(t_df['end_dist']>=dist)
+    return dist*t_df.loc[t_mask]['price'].mean()
 
 
 # Предсказание по расстоянию, пункту назначения и дню недели (в порядке приоритета)
