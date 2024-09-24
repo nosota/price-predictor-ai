@@ -44,7 +44,7 @@ def intervals_for_region(df, region_code):
     region_mask = df['region_code'] == region_code
     intervals = np.transpose(
         np.array([df.loc[region_mask]['begin_dist'].unique(), df.loc[region_mask]['end_dist'].unique()]))
-    intervals_count = intervals.shape[0]
+
     return intervals
 
 
@@ -105,8 +105,11 @@ def refine_df(df, t_df):
 
 
 def select_by_key(df, key, value):
-    res = df[df[key] == value].copy()
-    return res
+    try:
+        res = df[df[key] == value].copy()
+        return res
+    except Exception as ex:
+        raise ex
 
 
 def select_by_dict(df, key_vals):
@@ -118,9 +121,9 @@ def select_by_dict(df, key_vals):
 
 def df_region_crop(df, region_code=None, crops_id=None):
     sel = dict()
-    if region_code != None:
+    if region_code is not None:
         sel['region_code'] = region_code
-    if crops_id != None:
+    if crops_id is not None:
         sel['crops_id'] = crops_id
     return select_by_dict(df, sel)
 
@@ -162,7 +165,6 @@ def region_regression_series(df, t_df, *, window, min_samples=5, min_dists=3, in
     date_range = pd.date_range(start_date, end_date)
     ks = pd.DataFrame(index=date_range)
     for date in date_range:
-        loc_range = pd.date_range(date - delta, date)
         sub = df[date - delta:date]
         if (not include_near):
             sub = sub.loc[sub['distance'] > base_dist]
@@ -185,7 +187,6 @@ def region_regression_series_k0_k1(df, t_df, *, window, min_samples=5, min_dists
     date_range = pd.date_range(start_date, end_date)
     ks = pd.DataFrame(index=date_range)
     for date in date_range:
-        loc_range = pd.date_range(date - delta, date)
         sub = df[date - delta:date]
         if (not include_near):
             sub = sub.loc[sub['distance'] > base_dist]
@@ -335,10 +336,12 @@ def make_pred_keys(origins, pred_start, pred_end):
 def predict_series(y, *, days, var='fourier', n_harm=0, period=None, deg=4):
     if var == 'fourier':
         px, rx = predict_spectrum(y, days, n_harm)
-    if var == 'arima':
+    elif var == 'arima':
         px, rx = predict_arima(y, days, n_harm, period)
-    if var == 'poly':
+    elif var == 'poly':
         px, rx = predict_poly(y, days, deg)
+    else:
+        raise Exception(f'Значение {var} переменной var не поддерживается.')
     return px, rx
 
 
@@ -348,10 +351,9 @@ def predict_series_on_date(kdf, pdf, date, *, delta, pred_start=3, pred_end=5, v
     end_date = kdf.index.get_level_values(0).max()
     loc_start = date - delta
     loc_end = date
-    loc_range = pd.date_range(loc_start, loc_end)
     for key in columns:
         px, rx = predict_series(kdf.loc[pd.date_range(loc_start, loc_end), key].to_numpy(), days=pred_end,
-                                n_harm=n_harm, \
+                                n_harm=n_harm,
                                 period=period, deg=deg, var=var)
         # print(rx)
         for i in range(0, pred_end - pred_start + 1):
@@ -367,12 +369,11 @@ def predict_series_once(kdf, *, tr_days, pred_start=3, pred_end=5, var='fourier'
     pr_delta_end = pd.Timedelta(days=pred_end)
     loc_start = date - delta
     loc_end = date
-    loc_range = pd.date_range(loc_start, loc_end)
     pred_range = pd.date_range(date + pr_delta_start, date + pr_delta_end)
     preds = pd.DataFrame(index=pred_range, columns=kdf.columns)
     for key in columns:
         px, rx = predict_series(kdf.loc[pd.date_range(loc_start, loc_end), key].to_numpy(), days=pred_end,
-                                n_harm=n_harm, \
+                                n_harm=n_harm,
                                 period=period, deg=deg, var=var)
         for i in range(0, pred_end - pred_start + 1):
             preds.loc[loc_end + pd.Timedelta(days=pred_end - i), key] = rx[-1 - i]
@@ -427,8 +428,7 @@ def scores_old(true_Y, pred, d, idx, q, adjust_q, targ, main_metr):
 
 
 def scores(true_Y, pred, d, idx):
-    y1 = true_Y
-    y2 = pred
+
     data = (pred - true_Y).to_numpy()
     E = pd.DataFrame(data=data, dtype=float, columns=['errors'], index=idx, copy=True)
     E['distance'] = d
@@ -438,7 +438,7 @@ def scores(true_Y, pred, d, idx):
 def scores_from_df(df, targ_col, pred_col, begin_dist, end_dist):
     mask = (df['distance'] > begin_dist) & (df['distance'] <= end_dist)
     masked = df.loc[mask, ['distance', targ_col, pred_col]]
-    sub = masked[masked[pred_col].to_numpy() != None].dropna()
+    sub = masked[masked[pred_col].to_numpy() is not None].dropna()
     return scores(sub[targ_col], sub[pred_col], sub['distance'], sub.index)
 
 
@@ -446,7 +446,7 @@ def scores_from_df_old(df, targ_col, pred_col, begin_dist, end_dist, *, q=0.9, a
                        main_metr='None'):
     mask = (df['distance'] > begin_dist) & (df['distance'] <= end_dist)
     masked = df.loc[mask, ['distance', targ_col, pred_col]]
-    sub = masked[masked[pred_col].to_numpy() != None].dropna()
+    sub = masked[masked[pred_col].to_numpy() is not None].dropna()
     return scores_old(sub[targ_col], sub[pred_col], sub['distance'], sub.index, q, adjust_q, targ, main_metr)
 
 
@@ -617,12 +617,12 @@ def test_score_old(df, targ_key, region_code, t_df, *, plot_results=True, begin_
     for h in range(pred_start, pred_end + 1):
         print('Results for ' + str(h) + '-day prediction')
         test_score_h_old(df, targ_key, h, plot_results=plot_results, begin_dist=begin_dist, end_dist=end_dist,
-                         mean_df=mdf, q=q, \
+                         mean_df=mdf, q=q,
                          adjust_q=adjust_quantile, sep=sep, targ=targ)
 
 
 def test_score(df, targ_key, region_code, t_df, *, plot_results=True, calc_mean=True, begin_dist=base_dist,
-               end_dist=5000, \
+               end_dist=5000,
                pred_start=3, pred_end=5, sep=300):
     if calc_mean:
         pr_keys = make_pred_keys([targ_key], pred_start, pred_end)
@@ -661,7 +661,7 @@ def validate_model_pars(pars):
 
 def model_par_df(vars, train_windows, harms, periods, poly_orders):
     index = pd.MultiIndex.from_product([vars, train_windows, harms, periods, poly_orders],
-                                       names=['variant', 'train_window', \
+                                       names=['variant', 'train_window',
                                               'n_harm', 'period', 'poly_order'])
     res = pd.DataFrame(index=index).reset_index()
     mask = res.apply(validate_model_pars, axis=1).astype(bool)
@@ -724,10 +724,10 @@ def test_filter_model(df, t_df, fpars, mpars, reg_fun, restore_fun, *, region_co
     var, train_window, n_harm, period, poly_order = mpars
     sel = df_region_crop(df, region_code, crops_id)
     kdf = reg_fun(sel, t_df, window=window, min_samples=min_samples, min_dists=min_dists, include_near=False,
-                  include_long=True, \
+                  include_long=True,
                   region_code=region_code)
     fdf = filter(kdf, use_filter, filter_window, filter_order)
-    pred_df, fdf = moving_prediction(fdf, kdf, show_results=True, train_window=train_window, \
+    pred_df, fdf = moving_prediction(fdf, kdf, show_results=True, train_window=train_window,
                                      pred_start=pred_start, pred_end=pred_end, n_harm=n_harm, period=period,
                                      poly_order=poly_order, var=var)
     res_df = restore_prediction(sel, pred_df, t_df, region_code, restore_fun, kdf.columns, pred_start=pred_start,
@@ -754,7 +754,7 @@ def optimize_filter_model(df, t_df, fp_df, mp_df, reg_fun, restore_fun, *, regio
             # print('model params '+str(ind_m+1)+'/'+str(mpar_cnt))
             if validate_all_pars(parf, parm):
                 sc = estimate_model(sel, fdf, kdf, t_df, tuple(parm), restore_fun, region_code=region_code,
-                                    targ_hor=targ_hor, \
+                                    targ_hor=targ_hor,
                                     targ_metr=targ_metr, begin_dist=base_dist, end_dist=5000)
                 if best['value'] > sc:
                     best['value'] = sc
@@ -767,7 +767,6 @@ def optimize_filter_model(df, t_df, fp_df, mp_df, reg_fun, restore_fun, *, regio
 
 # Предсказание по тарифу
 def predict_4dist_by_tarif(dist, date, r_id, t_df):
-    max_left = t_df.index.get_level_values(0).max()
     t_mask = (t_df['begin_date'].dt.date <= date) & (t_df['end_date'].dt.date >= date) & (t_df['region_code'] == r_id)
     t_mask = t_mask&(t_df['begin_dist']<dist)&(t_df['end_dist']>=dist)
     return dist*t_df.loc[t_mask]['price'].mean()
@@ -942,7 +941,7 @@ def predict_by_precedent_crops_dow(df, dist, date, crops_id, region_code, dest_i
             p = sub.loc[mask].tail(1)['targ_price'].to_numpy()[0]
             return p * dist, 'd_e_d_d'
         # если не вышло найти культуру,пробуем с другой культурой, но этими пунктом и днём недели
-        (sub['day_of_week'] == day) & (sub['dest_id'] == dest_id)
+        mask = (sub['day_of_week'] == day) & (sub['dest_id'] == dest_id)
         if any(mask):
             p = sub.loc[mask].tail(1)['targ_price'].to_numpy()[0]
             return p * dist, 'd_d_e_e'
@@ -981,7 +980,6 @@ def prec_moving_pred(df, pr_df, tr_days, fun):
     for date in date_range:
         loc_start = start_date
         loc_end = date - test_delta
-        loc_range = pd.date_range(loc_start, loc_end)
         if (loc_end + pd.Timedelta(days=3)) in df.index.get_level_values(0):
             for id, item in preds.loc[loc_end + test_delta].groupby(level=0):
                 dist = item['distance'].to_numpy()[0]
@@ -1059,7 +1057,7 @@ class SeriesPredictor(BaseEstimator):
     def __init__(self, *, tarif_df, fpars, mpars, region_code, form_type, min_samples=2, min_dists=2):
         if not validate_all_pars(fpars, mpars):
             raise Exception('Incorrect parameters combination')
-            return
+
         self.__train_df = pd.DataFrame()
         self.__fdf = pd.DataFrame()
         self.tarif_df = tarif_df
@@ -1091,7 +1089,7 @@ class SeriesPredictor(BaseEstimator):
     def fit(self, df, y=None, *, date=None):
         self.__train_df = select_by_key(df, 'region_code', self.region_code)
         use_filter, window, filter_window, filter_order = self.fpars
-        kdf = self.__reg_fun(self.__train_df, self.tarif_df, window=window, min_samples=self.min_samples, \
+        kdf = self.__reg_fun(self.__train_df, self.tarif_df, window=window, min_samples=self.min_samples,
                              min_dists=self.min_dists, include_near=False, include_long=True,
                              region_code=self.region_code)
         if not (date is None):
@@ -1105,7 +1103,7 @@ class SeriesPredictor(BaseEstimator):
     def predict(self, pred_start, pred_end, *, df=None, dists=None, ):
         var, train_window, n_harm, period, poly_order = self.mpars
         pred_df = predict_series_once(self.__fdf, tr_days=train_window, pred_start=pred_start, pred_end=pred_end,
-                                      var=var, \
+                                      var=var,
                                       n_harm=n_harm, period=period, deg=poly_order)
         # если есть набор данных на входе - берём его, обрезаем по датам предсказаний и региону
         if (not df is None):
