@@ -409,10 +409,10 @@ def scores_old(true_Y, pred, d, idx, q, adjust_q, targ, main_metr):
     E['AE'] = np.abs(E['E'])
     E['distance'] = d
     minE = E['E'].min()
-    maxE = E['E'].max()
+    # maxE = E['E'].max()
+    maxE = metr.max_error(y1, y2)
     meanE = E['E'].mean()
     mae = metr.mean_absolute_error(y1, y2)
-    maxE = metr.max_error(y1, y2)
     rmse = metr.root_mean_squared_error(y1, y2)
     if adjust_q == False:
         adq = q
