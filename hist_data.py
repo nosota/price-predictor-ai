@@ -11,14 +11,14 @@ from init import POSTGRES_DSN
 # Все заявки, которые разбирались дольше указанного в right_price_time времени считать непопулярными
 # по причине не верно установленной цены.
 def get_historical_data(num_days, region_code, today_date, crops_id, right_price_time=24, target_key='price_gross_per_ton') -> tuple[DataFrame, Any]:
-
-    to_date = today_date + timedelta(days=num_days)
+    from_date = today_date - timedelta(days=num_days)
 
     with psycopg2.connect(POSTGRES_DSN) as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT stat.delivery_order_id,
-                       stat.order_date, 
+                SELECT DISTINCT ON (stat.delivery_order_id)  
+                       stat.delivery_order_id,
+                       stat.order_date,
                        stat.order_id,
                        stat.distance,
                        stat.price_gross_per_ton,
@@ -28,42 +28,31 @@ def get_historical_data(num_days, region_code, today_date, crops_id, right_price
                        stat.region_code,
                        stat.status,
                        stat.ctime,
-                       crops_id,
-                       crop_name,
-                       dest_title
-                FROM (SELECT DISTINCT ON (order_id ) order_date,
-                                                     order_id,
-                                                     delivery_order_id,
-                                                     distance,
-                                                     price_gross_per_ton,
-                                                     price_net_per_ton,
-                                                     disassembled_weight,
-                                                     hours_until_disassembled,
-                                                     region_code,
-                                                     status,
-                                                     ctime
-                      FROM delivery_orders_stat
-                      WHERE order_date <= %(to_date)s AND region_code = %(region_code)s AND hours_until_disassembled <= %(right_price_time)s 
-                      ORDER BY order_id, ctime, delivery_order_id) AS stat
-                         INNER JOIN ((SELECT DISTINCT ON (delivery_order_id) order_id, delivery_order_id, crops_id, crops as crop_name
-                                      FROM delivery_orders WHERE crops_id = %(crops_id)s
-                                      ORDER BY delivery_order_id) as dorders INNER JOIN (SELECT DISTINCT ON (order_id) order_id, dest_title
-                                                                                         FROM orders
-                                                                                         WHERE order_date <= %(to_date)s 
-                                                                                         ORDER BY order_id) as sorders
-                                     ON dorders.order_id = sorders.order_id) as t ON stat.delivery_order_id = t.delivery_order_id
+                       d.crops_id,
+                       o.crop_name,
+                       o.dest_title
+                FROM delivery_orders_stat stat
+                JOIN delivery_orders d ON stat.delivery_order_id = d.delivery_order_id
+                JOIN orders o ON d.order_id = o.order_id
+                WHERE stat.hours_until_disassembled <= %(right_price_time)s
+                  AND stat.region_code = %(region_code)s
+                  AND d.crops_id = %(crops_id)s
+                  AND stat.ctime BETWEEN %(from_date)s AND %(today_date)s
+                ORDER BY stat.delivery_order_id, stat.ctime DESC;
             """, {
-                "to_date": to_date,
+                "from_date": from_date,
+                "today_date": today_date,
                 "crops_id": crops_id,
                 "region_code": region_code,
                 "right_price_time": right_price_time
             })
 
             rows = cur.fetchall()
+            tmp_df = pd.DataFrame(columns=['date', 'id', 'month', 'distance', 'target', 'targ_price', 'region_code',
+                                           'crops_id', 'day_of_week', 'hours', 'dest_id'])
             if len(rows) > 0:
                 filtered_df = pd.DataFrame(rows, columns=[desc[0] for desc in cur.description])
 
-                tmp_df = pd.DataFrame()
                 date_key = 'ctime'  # для правильности построения временного ряда нужен ctime, в не order_date!
                 tmp_df['date'] = filtered_df[date_key].dt.floor("D")
                 tmp_df['id'] = filtered_df['order_id']
@@ -82,4 +71,4 @@ def get_historical_data(num_days, region_code, today_date, crops_id, right_price
 
                 return tmp_df, le.classes_
             else:
-                return pd.DataFrame(), []
+                return tmp_df, []

@@ -1,7 +1,10 @@
+from datetime import timedelta
+
 import numpy as np
 import pandas as pd
 from hist_data import get_historical_data
-from models.ai.processing import SeriesPredictor, filter_par_df, get_pars, model_par_df, PrecedentPredictor
+from models.ai.processing import SeriesPredictor, filter_par_df, get_pars, model_par_df, PrecedentPredictor, \
+    make_working_df
 from utils import round_to_nearest_10
 
 
@@ -59,9 +62,20 @@ def _predict_tariff_impl(pr_df, region_code, today_date, order_date, crop_id, di
         return use_precedent_model(pr_df, historical_data, region_code, order_date, distance, crop_id, dest_id)
     else:
         # Используем временные ряды
-        if len(historical_data) >= 15:
-            filt_pars, mod_pars = get_pars(fp, mp, 67, 23)
-            form_type = 'k0k1'  # тип формулы цены
+
+        # Должно быть 5 уникальных дат по полю id (date),
+        # самая старая дата в наборе должна быть минимум 4 дня назад или старше.
+        # Добавляем индексы под отсутствующие даты. Данные по пропущенным дням будут экстраполированы.
+        from_date = today_date - timedelta(days=4)
+        try:
+            historical_data.reindex(pd.date_range(from_date, today_date), level=0)
+        except Exception as ex:
+            raise ex
+
+        # суммарно должно быть >= 8 перевозок
+        if len(historical_data) >= 8:
+            filt_pars, mod_pars = get_pars(fp, mp, 52, 127)
+            form_type = 'k1'  # тип формулы цены
             predictor = SeriesPredictor(tarif_df=pr_df, fpars=filt_pars, mpars=mod_pars,
                                         region_code=region_code, form_type=form_type)
             try:
