@@ -16,29 +16,47 @@ def get_historical_data(num_days, region_code, today_date, crops_id, right_price
     with psycopg2.connect(POSTGRES_DSN) as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT DISTINCT ON (stat.delivery_order_id)  
-                       stat.delivery_order_id,
-                       stat.order_date,
-                       stat.order_id,
-                       stat.distance,
-                       stat.price_gross_per_ton,
-                       stat.price_net_per_ton,
-                       stat.disassembled_weight,
-                       stat.hours_until_disassembled,
-                       stat.region_code,
-                       stat.status,
-                       stat.ctime,
-                       d.crops_id,
-                       o.crop_name,
-                       o.dest_title
-                FROM delivery_orders_stat stat
-                JOIN delivery_orders d ON stat.delivery_order_id = d.delivery_order_id
-                JOIN orders o ON d.order_id = o.order_id
-                WHERE stat.hours_until_disassembled <= %(right_price_time)s
-                  AND stat.region_code = %(region_code)s
-                  AND d.crops_id = %(crops_id)s
-                  AND stat.ctime BETWEEN %(from_date)s AND %(today_date)s
-                ORDER BY stat.delivery_order_id, stat.ctime DESC;
+            SELECT stat.delivery_order_id,
+                   stat.order_id,
+                   stat.distance,
+                   stat.price_gross_per_ton,
+                   stat.price_net_per_ton,
+                   stat.disassembled_weight,
+                   stat.hours_until_disassembled,
+                   stat.region_code,
+                   stat.status,
+                   stat.ctime,
+                   crops_id,
+                   dest_title
+            FROM (SELECT DISTINCT ON (order_id ) order_date,
+                                                 order_id,
+                                                 delivery_order_id,
+                                                 distance,
+                                                 price_gross_per_ton,
+                                                 price_net_per_ton,
+                                                 disassembled_weight,
+                                                 hours_until_disassembled,
+                                                 region_code,
+                                                 status,
+                                                 ctime
+                  FROM delivery_orders_stat
+                  WHERE ctime BETWEEN %(from_date)s AND %(today_date)s
+                    AND hours_until_disassembled <= 24
+                    AND region_code = %(region_code)s
+                  ORDER BY order_id, ctime, delivery_order_id) AS stat
+                     INNER JOIN
+                 (
+                     (SELECT DISTINCT ON (delivery_order_id) order_id, delivery_order_id, crops_id
+                      FROM delivery_orders
+                      WHERE crops_id = %(crops_id)s
+                      ORDER BY delivery_order_id) as dorders
+                         INNER JOIN
+                         (SELECT DISTINCT ON (order_id) order_id, dest_title
+                          FROM orders
+                          ORDER BY order_id) as sorders
+                     ON dorders.order_id = sorders.order_id
+                     ) as t
+                 ON stat.delivery_order_id = t.delivery_order_id            
             """, {
                 "from_date": from_date,
                 "today_date": today_date,
