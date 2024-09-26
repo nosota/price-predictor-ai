@@ -41,7 +41,7 @@ def get_historical_data(num_days, region_code, today_date, crops_id, right_price
                                                  ctime
                   FROM delivery_orders_stat
                   WHERE ctime BETWEEN %(from_date)s AND %(today_date)s
-                    AND hours_until_disassembled <= 24
+                    AND hours_until_disassembled <= 48
                     AND region_code = %(region_code)s
                   ORDER BY order_id, ctime, delivery_order_id) AS stat
                      INNER JOIN
