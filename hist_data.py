@@ -10,7 +10,7 @@ from init import POSTGRES_DSN
 
 # Все заявки, которые разбирались дольше указанного в right_price_time времени считать непопулярными
 # по причине не верно установленной цены.
-def get_historical_data(num_days, region_code, today_date, crops_id, right_price_time=24, target_key='price_gross_per_ton') -> tuple[DataFrame, Any]:
+def get_historical_data(num_days, region_code, today_date, crops_id, right_price_time=48, target_key='price_gross_per_ton') -> tuple[DataFrame, Any]:
     from_date = today_date - timedelta(days=num_days)
 
     with psycopg2.connect(POSTGRES_DSN) as conn:
@@ -41,7 +41,7 @@ def get_historical_data(num_days, region_code, today_date, crops_id, right_price
                                                  ctime
                   FROM delivery_orders_stat
                   WHERE ctime BETWEEN %(from_date)s AND %(today_date)s
-                    AND hours_until_disassembled <= 48
+                    AND hours_until_disassembled <= %(right_price_time)s
                     AND region_code = %(region_code)s
                   ORDER BY order_id, ctime, delivery_order_id) AS stat
                      INNER JOIN
